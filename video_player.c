@@ -15,12 +15,13 @@ static void* lock_callback(void *data, void **p_pixels);
 
 void vp_initialize(video_player_info * vpi)
 {       
-    int argc = 1;
     char const *argv[] = {
-        "--alsa-caching=10000", /* skip any audio track */
+        "--alsa-caching=20000", /* skip any audio track */
         "--no-xlib",
         "--verbose=1"
     };    
+    int argc = sizeof(argv) / sizeof(const char*);
+    printf("Have %d arguments to libvlc_new().\n", argc);
     vpi->inst = libvlc_new(argc, argv);
     vpi->player = libvlc_media_player_new(vpi->inst);
 }

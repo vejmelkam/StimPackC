@@ -24,18 +24,26 @@ uint64_t next_video_id = 0;
 
 
 typedef struct {
-    const char * name;
+    const char * filename;
     int volume;
     int timeout_ms;
-    double ratio;      
+    int aspect_num;      
+    int aspect_den;
 } video_entry;
 
 
 video_entry video_db[] = 
 {
-    { "data/videos/TP01.avi", 30, 50 * 1000, 16.0 / 9.0 },
-    { "data/videos/TP02.avi", 35, 50 * 1000, 4.0 / 3.0 },
-    { "data/videos/TP03.avi", 30, 50 * 1000, 16.0 / 9.0 },
+  { "data/videos/TP01.avi",  35, 480 * 1000, 16, 9 },
+  { "data/videos/TP02.avi",  35, 480 * 1000,  4, 3 },
+  { "data/videos/TP03.avi",  45, 480 * 1000,  4, 3 },
+  { "data/videos/TP04.avi",  45, 480 * 1000,  4, 3 },
+  { "data/videos/TP05.avi", 180, 480 * 1000, 16, 9 },
+  { "data/videos/TP06.avi",  45, 480 * 1000, 16, 9 },
+  { "data/videos/TP07.avi",  40, 480 * 1000, 16, 9 },
+  { "data/videos/TP08.avi",  35, 480 * 1000, 16, 9 },
+  { "data/videos/TP09.avi",  55, 480 * 1000, 16, 9 },
+  { "data/videos/TP10.avi",  35, 480 * 1000,  4, 3 }
 };
 
 
@@ -53,15 +61,15 @@ uint32_t stop_video_player(uint32_t timeout_ms, void * par)
 }
 
 
-int play_video_from_database(video_entry * vid)
+int play_video(const char * fname, int volume, int timeout_ms, int anum, int aden)
 {
     // set the 16:9 surface for the first video
-    if(vid->ratio == 16.0/9.0)
+    if(anum == 16 && aden == 9)
     {
         sfi.vid_surf = surf169;
         sfi.vid_rect = rect169;
     }
-    else if(vid->ratio == 4.0/3.0)
+    else if(anum == 4 && aden == 3)
     {
         sfi.vid_surf = surf43;
         sfi.vid_rect = rect43;
@@ -69,7 +77,7 @@ int play_video_from_database(video_entry * vid)
     else
     {
         // we have a problem
-        printf("Failed to find rendering rectangle for proportion %g.\n", vid->ratio);
+      printf("Failed to find rendering rectangle for proportion %d:%d.\n", anum, aden);
         assert(0);
     }
     
@@ -77,12 +85,13 @@ int play_video_from_database(video_entry * vid)
     SDL_FillRect(sfi.screen, 0, 0x00000000);
     SDL_Flip(sfi.screen);
 
-    vp_prepare_media(&vpi, vid->name);
-    vp_play_with_timeout(&vpi, vid->timeout_ms, vid->volume);
+    vp_prepare_media(&vpi, fname);
+    vp_play_with_timeout(&vpi, timeout_ms, volume);
     
     // make sure the stop 
     uint64_t current_video_id = ++next_video_id;
-    SDL_TimerID timer_id = SDL_AddTimer(vid->timeout_ms, stop_video_player, (void*)current_video_id);
+    SDL_TimerID timer_id = SDL_AddTimer(timeout_ms, stop_video_player,
+					(void*)current_video_id);
     
     int done = 0;
     int quit = 0;
@@ -180,17 +189,23 @@ int main(int argc, char ** argv)
     surf169 = SDL_CreateRGBSurface(SDL_SWSURFACE, rect169.w, rect169.h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0);
     
     // Phase 3: sound level calibration
-    play_video_from_database(&video_db[2]);
+    video_entry * ve = &video_db[6];
+    if(play_video(ve->filename, ve->volume, ve->timeout_ms,
+		  ve->aspect_num, ve->aspect_den))
+      return 1;
+
     
-    for(int i = 0; i < 3; i++)
+    for(int i = 0; i < 10; i++)
     {
         printf("Waiting for pulse.\n");
         // wait for a pulse (black screen)
-        listen_for_pulse(&pl, 1000);
+        listen_for_pulse(&pl, 2000);
         
         // play a video
         printf("Playing video.\n");
-        if(play_video_from_database(&video_db[i]))
+	ve = &video_db[i];
+        if(play_video(ve->filename, ve->volume, ve->timeout_ms, 
+		      ve->aspect_num, ve->aspect_den))
             return 1;
         
         // wait while displaying message
