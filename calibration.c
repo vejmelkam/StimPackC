@@ -49,96 +49,99 @@ int calibrate_rendering_target_rect(SDL_Surface * surf, SDL_Rect * rect, double 
     SDL_Rect r2;
     while(!done)
     {
-        while(SDL_PollEvent(&event)) 
+        if(!SDL_PollEvent(&event))
         {
-            switch(event.type)
-            {
-                case SDL_KEYDOWN:
-                    
-                    // copy rectangle
-                    r2 = *rect;
-                    
-                    switch(event.key.keysym.sym)
-                    {
-                        case SDLK_LEFT:
-                            if(r2.x >= 10)
-                            {
-                                r2.x -= 10;
-                                break;
-                            } else continue;
+            SDL_Delay(10);
+            continue;
+        }
+        
+        switch(event.type)
+        {
+            case SDL_KEYDOWN:
 
-                        case SDLK_RIGHT:
-                            if(r2.x < r2.w - 10)
-                            {
-                                r2.x += 10;
-                                break;
-                            } else continue;
+                // copy rectangle
+                r2 = *rect;
 
-                        case SDLK_UP:
-                            if(r2.y >= 10)
-                            {
-                                r2.y -= 10;
-                                break;
-                            } else continue;
-
-                        case SDLK_DOWN:
-                            if(r2.y < surf->h - 10)
-                            {
-                                r2.y += 10;
-                                break;
-                            } else continue;
-
-                        case SDLK_w:
-                            r2.w += 10;
-                            r2.x -= 5;
-                            r2.h = lrint(r2.w / ratio);
-                            r2.y -= (r2.h - rect->h) / 2;
-
-                            // if update takes us outside surface area, cancel movement
-                            if(r2.x < 0 || r2.y < 0 || r2.x+r2.w >= surf->w || r2.y + r2.h >= surf->h)
-                                continue;
+                switch(event.key.keysym.sym)
+                {
+                    case SDLK_LEFT:
+                        if(r2.x >= 10)
+                        {
+                            r2.x -= 10;
                             break;
+                        } else continue;
 
-                        case SDLK_s:
-                            r2.w -= 10;
-                            r2.x += 5;
-                            r2.h = lrint(r2.w / ratio);
-                            r2.y -= (r2.h - rect->h) / 2;
-
-                            // if update takes us outside surface area, cancel movement
-                            if(r2.x < 0 || r2.y < 0 || r2.x+r2.w >= surf->w || r2.y + r2.h >= surf->h)
-                                continue;
+                    case SDLK_RIGHT:
+                        if(r2.x < r2.w - 10)
+                        {
+                            r2.x += 10;
                             break;
+                        } else continue;
 
-                        case SDLK_RETURN:
-                            printf("Exiting calibration procedure with rect (x=%d,y=%d,w=%d,h=%d).\n",
-                                    rect->x, rect->y, rect->w, rect->h);
-                            done = 1;
+                    case SDLK_UP:
+                        if(r2.y >= 10)
+                        {
+                            r2.y -= 10;
                             break;
+                        } else continue;
 
-                        default:
+                    case SDLK_DOWN:
+                        if(r2.y < surf->h - 10)
+                        {
+                            r2.y += 10;
                             break;
-                    }
+                        } else continue;
 
-                    // erase in last position, draw in new position
-                    draw_navigation(surf, rect, black_col, black_col, black_col);
-                    draw_navigation(surf, &r2, red_col, yellow_col, green_col);
-                    *rect = r2;
-                    SDL_Flip(surf);
-                    break;
+                    case SDLK_w:
+                        r2.w += 10;
+                        r2.x -= 5;
+                        r2.h = lrint(r2.w / ratio);
+                        r2.y -= (r2.h - rect->h) / 2;
 
-                case SDL_QUIT:
-                    done = 1;
-                    quit = 1;
-                    printf("Exiting calibration procedure with QUIT intention.\n");
-                    break;
-                    
-                default:
-                    break;
+                        // if update takes us outside surface area, cancel movement
+                        if(r2.x < 0 || r2.y < 0 || r2.x+r2.w >= surf->w || r2.y + r2.h >= surf->h)
+                            continue;
+                        break;
 
-            } // swithc evtype
-        } // poll
-    } // while not done
+                    case SDLK_s:
+                        r2.w -= 10;
+                        r2.x += 5;
+                        r2.h = lrint(r2.w / ratio);
+                        r2.y -= (r2.h - rect->h) / 2;
+
+                        // if update takes us outside surface area, cancel movement
+                        if(r2.x < 0 || r2.y < 0 || r2.x+r2.w >= surf->w || r2.y + r2.h >= surf->h)
+                            continue;
+                        break;
+
+                    case SDLK_RETURN:
+                        printf("Exiting calibration procedure with rect (x=%d,y=%d,w=%d,h=%d).\n",
+                                rect->x, rect->y, rect->w, rect->h);
+                        done = 1;
+                        break;
+
+                    default:
+                        break;
+                }
+
+                // erase in last position, draw in new position
+                draw_navigation(surf, rect, black_col, black_col, black_col);
+                draw_navigation(surf, &r2, red_col, yellow_col, green_col);
+                *rect = r2;
+                SDL_Flip(surf);
+                break;
+
+            case SDL_QUIT:
+                done = 1;
+                quit = 1;
+                printf("Exiting calibration procedure with QUIT intention.\n");
+                break;
+
+            default:
+                break;
+
+        } // switch evtype
+    } // wait while not done
     
     // cleanup after calibration screen
     SDL_FillRect(surf, NULL, black_col);
