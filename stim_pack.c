@@ -51,15 +51,16 @@ int cal_video;
 #define MARQUEE_FONT_SIZE 40
 #define INITIAL_PULSE_TIMEOUT (1 * 1000)
 #define REGULAR_PULSE_TIMEOUT 3000
-#define VIDEO_DURATION (480 * 1000)
+#define VIDEO_DURATION (20 * 1000)
 #define REST_MESSAGE_TIMEOUT 5000
-#define REST_DURATION (30*1000)
-#define VIDEO_SCENE_COUNT 20
+#define REST_DURATION (2*1000)
+#define VIDEO_SCENE_COUNT 30
 
 
 typedef struct {
     const char * filename;
     int volume;
+    int add_latency;
     int aspect_num;      
     int aspect_den;
 } video_entry;
@@ -67,16 +68,16 @@ typedef struct {
 
 video_entry video_db[] = 
 {
-  { "data/videos/TP01.avi",  30, 16, 9 },
-  { "data/videos/TP02.avi",  30,  4, 3 },
-  { "data/videos/TP03.avi",  40,  4, 3 },
-  { "data/videos/TP04.avi",  40,  4, 3 },
-  { "data/videos/TP05.avi", 100, 16, 9 },
-  { "data/videos/TP06.avi",  40, 16, 9 },
-  { "data/videos/TP07.avi",  35, 16, 9 },
-  { "data/videos/TP08.avi",  30, 16, 9 },
-  { "data/videos/TP09.avi",  47, 16, 9 },
-  { "data/videos/TP10.avi",  30,  4, 3 }
+  { "data/videos/TP01.avi",  30,  0, 16, 9 },
+  { "data/videos/TP02.avi",  30, 80, 4, 3 },
+  { "data/videos/TP03.avi",  40, 85, 4, 3 },
+  { "data/videos/TP04.avi",  40, 85, 4, 3 },
+  { "data/videos/TP05.avi", 100, 85, 16, 9 },
+  { "data/videos/TP06.avi",  40, 80, 16, 9 },
+  { "data/videos/TP07.avi",  35, 80, 16, 9 },
+  { "data/videos/TP08.avi",  30, 85, 16, 9 },
+  { "data/videos/TP09.avi",  47, 40, 16, 9 },
+  { "data/videos/TP10.avi",  30, 75,  4, 3 }
 };
 
 
@@ -387,8 +388,8 @@ int parse_argument_line(int argc, char ** argv)
     }
 
     //FIXME: this is for test mode only
-    for(int i = 0; i < 10; i++)
-      preload_video(video_db[i].filename);
+    //    for(int i = 0; i < 10; i++)
+    //  preload_video(video_db[i].filename);
 
     return ok;
 }
