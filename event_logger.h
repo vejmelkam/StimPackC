@@ -28,7 +28,7 @@ extern "C" {
         LOGEVENT_VIDEO_FORCED_STOP,
         LOGEVENT_WAITING_FOR_PULSE,
         LOGEVENT_PULSE_ACQUIRED,
-        LOGEVENT_PULSE_TIMED_OUT
+        LOGEVENT_PULSE_TIMED_OUT,
                
     } logged_event_code;
 

@@ -12,7 +12,7 @@ stim_pack: $(SOURCES)
 	gcc -o stim_pack $(CFLAGS) $(SOURCES) -lvlc -lSDL -lSDL_ttf $(DRAW_DIR)/lib/libSDL_draw.a
 
 
-pulse_test: $(SOURCES)
+pulse_test: $(SOURCES) pulse_test.c
 	gcc -o pulse_test $(CFLAGS) pulse_test.c pulse_listener.c event_logger.c -lSDL
 
 

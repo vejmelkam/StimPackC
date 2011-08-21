@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include <SDL/SDL.h>
+
 volatile int done = 0;
 
 void signal_handler(int sig)
@@ -30,6 +32,12 @@ char * string_timestamp()
 int main(int argc, char ** argv)
 {
     pulse_listener pl;
+
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTTHREAD | SDL_INIT_TIMER) == -1)
+    {
+        printf("[pulse_test] cannot initialize SDL\n");
+        return -1;
+    }
 
     // install SIGINT handler
     signal(SIGINT, signal_handler);
@@ -69,6 +77,8 @@ int main(int argc, char ** argv)
         // we have the info, clear the request flag
         pulse_listener_clear_request(&pl);
     }
+
+    event_logger_save_log("pulse_test.log");    
 
     pulse_listener_shutdown(&pl);
     event_logger_shutdown();

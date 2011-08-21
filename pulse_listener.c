@@ -138,6 +138,9 @@ uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
 
 int listen_for_pulse(pulse_listener * pl, uint32_t timeout_ms)
 {
+    if(pl->log_pulses)
+        event_logger_log_with_timestamp(LOGEVENT_WAITING_FOR_PULSE, 0);
+
     clear_pulse_register(pl);
     
     // initialize service variables
