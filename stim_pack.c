@@ -521,8 +521,8 @@ int main(int argc, char ** argv)
         // we have the info, clear the request flag
         pulse_listener_clear_request(&pl);
 
-	// delay 80 ms to be around 130ms
-	SDL_Delay(80);
+	// delay to equalize videos
+	SDL_Delay(ve->add_latency);
 
 	// play a video
         fprintf(stderr, "[stimpack] [%s] playing video number %d with id %d\n",
