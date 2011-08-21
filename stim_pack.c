@@ -13,6 +13,8 @@
 #include <math.h>
 #include <time.h>
 
+#define PRODUCTION_CODE 
+
 
 /* global rendering variables */
 sdl_frame_info sfi;
@@ -34,28 +36,27 @@ int cal_video;
 
 /******     RENDERING AND TIMING PARAMETERS    ******/
 
+#ifdef PRODUCTION_CODE
 
-// STANDARD SETTINGS
-/*
 #define MARQUEE_FONT_SIZE 40
-#define INITIAL_PULSE_TIMEOUT (30 * 1000)
+#define INITIAL_PULSE_TIMEOUT 0
 #define REGULAR_PULSE_TIMEOUT 3000
 #define VIDEO_DURATION (480*1000)
 #define REST_MESSAGE_TIMEOUT 5000
 #define REST_DURATION (600*1000)
 #define VIDEO_SCENE_COUNT 4
-*/
 
+#else
 
-// TESTING SETTINGS
 #define MARQUEE_FONT_SIZE 40
-#define INITIAL_PULSE_TIMEOUT (1 * 1000)
-#define REGULAR_PULSE_TIMEOUT 3000
-#define VIDEO_DURATION (20 * 1000)
-#define REST_MESSAGE_TIMEOUT 5000
+#define INITIAL_PULSE_TIMEOUT 1000
+#define REGULAR_PULSE_TIMEOUT 500
+#define VIDEO_DURATION (15 * 1000)
+#define REST_MESSAGE_TIMEOUT 2000
 #define REST_DURATION (2*1000)
-#define VIDEO_SCENE_COUNT 30
+#define VIDEO_SCENE_COUNT 10
 
+#endif // PRODUCTION_CODE
 
 typedef struct {
     const char * filename;
@@ -69,14 +70,14 @@ typedef struct {
 video_entry video_db[] = 
 {
   { "data/videos/TP01.avi",  30,  0, 16, 9 },
-  { "data/videos/TP02.avi",  30, 80, 4, 3 },
-  { "data/videos/TP03.avi",  40, 85, 4, 3 },
-  { "data/videos/TP04.avi",  40, 85, 4, 3 },
-  { "data/videos/TP05.avi", 100, 85, 16, 9 },
-  { "data/videos/TP06.avi",  40, 80, 16, 9 },
-  { "data/videos/TP07.avi",  35, 80, 16, 9 },
-  { "data/videos/TP08.avi",  30, 85, 16, 9 },
-  { "data/videos/TP09.avi",  47, 40, 16, 9 },
+  { "data/videos/TP02.avi",  30, 40, 4, 3 },
+  { "data/videos/TP03.avi",  40, 50, 4, 3 },
+  { "data/videos/TP04.avi",  40, 70, 4, 3 },
+  { "data/videos/TP05.avi", 100, 75, 16, 9 },
+  { "data/videos/TP06.avi",  40, 65, 16, 9 },
+  { "data/videos/TP07.avi",  35, 70, 16, 9 },
+  { "data/videos/TP08.avi",  30, 80, 16, 9 },
+  { "data/videos/TP09.avi",  47, 35, 16, 9 },
   { "data/videos/TP10.avi",  30, 75,  4, 3 }
 };
 
@@ -85,7 +86,8 @@ void preload_video(const char * filename)
 {
     char buf[1000000];
     FILE * f = fopen(filename, "r");
-    while(!feof(f))
+    int max_reads = 0;
+    while(!feof(f) && (++max_reads < 100))
         fread(buf, 1000000, 1, f);
     fclose(f);
 }
@@ -365,9 +367,9 @@ int parse_argument_line(int argc, char ** argv)
     }
     else
     {
-        printf("[stimpack] [%s] pre-loading calibration video [id %d]\n",
-	       string_timestamp(), cal_video);
-       	preload_video(video_db[cal_video-1].filename);
+      //        printf("[stimpack] [%s] pre-loading calibration video [id %d]\n",
+      //       string_timestamp(), cal_video);
+	//	preload_video(video_db[cal_video-1].filename);
     }
     
     int ok = 1;
@@ -381,15 +383,11 @@ int parse_argument_line(int argc, char ** argv)
         }
 	else
 	{
-	    printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
-		   string_timestamp(), i + 1, video_sched[i]);
-	    preload_video(video_db[i].filename);
+	  //	    printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
+	  //	   string_timestamp(), i + 1, video_sched[i]);
+	    //	    preload_video(video_db[i].filename);
 	}
     }
-
-    //FIXME: this is for test mode only
-    //    for(int i = 0; i < 10; i++)
-    //  preload_video(video_db[i].filename);
 
     return ok;
 }
@@ -403,9 +401,18 @@ int main(int argc, char ** argv)
     if(!parse_argument_line(argc, argv))
         return -1;
     
-    printf("[stimpack] [%s] stim_pack C version is starting up.\n", string_timestamp());
+    printf("[stimpack] [%s] stim_pack C version is starting up.\n",
+	   string_timestamp());
+
+#ifdef PRODUCTION_CODE
+    printf("[stimpack] ***** this version is production code *****\n");
+#else
+    printf("[stimpack] ***** THIS VERSION IS TEST CODE, NOT FOR USE *****\n");
+#endif
+
     printf("Subject id: %s cal_video: %d schedule: %d %d %d %d\n",
-            subj_id, cal_video, video_sched[0], video_sched[1], video_sched[2], video_sched[3]);
+	   subj_id, cal_video, video_sched[0],
+	   video_sched[1], video_sched[2], video_sched[3]);
 
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTTHREAD | SDL_INIT_TIMER) == -1)
     {
@@ -473,6 +480,7 @@ int main(int argc, char ** argv)
     // Phase 3: sound level calibration
     printf("[stimpack] [%s] playing calibration video %d.\n", string_timestamp(), cal_video);
     fprintf(stderr, "[stimpack] [%s] playing calibration video %d, press Enter to terminate.\n", string_timestamp(), cal_video);
+
     video_entry * ve = &video_db[cal_video - 1];
     if(play_video(ve->filename, ve->volume, VIDEO_DURATION,
 		  ve->aspect_num, ve->aspect_den, 0))
@@ -490,14 +498,14 @@ int main(int argc, char ** argv)
     for(int i = 0; i < VIDEO_SCENE_COUNT; i++)
     {
         // select new video (video_sched contains 1-based indices)
-      //        assert(0 <= i && i < 10);
-      //	int video_ndx = video_sched[i] - 1;
-      //	ve = &video_db[video_ndx];
-
-	// FIXME: this is TEST MODE
+#ifdef PRODUCTION_CODE
+        assert(0 <= i && i < 10);
+	int video_ndx = video_sched[i] - 1;
+	ve = &video_db[video_ndx];
+#else
 	int video_ndx = i % 10;
         ve = &video_db[i % 10];
-
+#endif
        	if(play_video(ve->filename, ve->volume, 10, ve->aspect_num, 
 		      ve->aspect_den, 0))
             return 1;
@@ -506,11 +514,13 @@ int main(int argc, char ** argv)
         uint32_t pulse_timeout = i == 0? INITIAL_PULSE_TIMEOUT : REGULAR_PULSE_TIMEOUT;
 	printf("[wait-for-pulse] [%s] listening on parallel port [timeout %u ms].\n",
 	       string_timestamp(), pulse_timeout);
-        event_logger_log_with_timestamp(LOGEVENT_WAITING_FOR_PULSE, 0);
+
+	// wait for a new pulse
 	switch(listen_for_pulse(&pl, pulse_timeout))
 	{
 	case PL_REQ_TIMED_OUT:
-	  printf("[wait-for-pulse] [%s] timed out waiting for pulse.\n", string_timestamp());
+	  printf("[wait-for-pulse] [%s] timed out waiting for pulse.\n",
+		 string_timestamp());
 	  break;
 
 	case PL_REQ_PULSE_ACQUIRED:
@@ -522,6 +532,7 @@ int main(int argc, char ** argv)
         pulse_listener_clear_request(&pl);
 
 	// delay to equalize videos
+	printf("[stimpack] waiting %d ms before playing.\n", ve->add_latency);
 	SDL_Delay(ve->add_latency);
 
 	// play a video
@@ -530,7 +541,8 @@ int main(int argc, char ** argv)
         printf("[video] [%s] playing video number %d, with id %d, timeout %d, volume %d.\n",
 	       string_timestamp(), i+1, video_ndx+1, VIDEO_DURATION, ve->volume);
 
-       	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, ve->aspect_num, ve->aspect_den, 1))
+       	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, 
+		      ve->aspect_num, ve->aspect_den, 1))
             return 1;
 
         // 30 seconds relaxed cross fixation if not after last video
@@ -544,7 +556,7 @@ int main(int argc, char ** argv)
     render_marquee_text("10MIN KLID", &rect43, REST_MESSAGE_TIMEOUT);
 
     // render the cross for the resting state
-    printf("[stimpack] [%s] entering rest stage.\n", string_timestamp());
+    printf("[stimpack] [%s] entering REST stage.\n", string_timestamp());
     render_marquee_text("+", &rect43, REST_DURATION);
     
     // stop listening for pulses

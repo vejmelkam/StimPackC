@@ -27,22 +27,24 @@ else
   orig_sig_name = "pulse_timeout";
 end
 
-vid_count = 30;
-
 # compute number of frames shown from each video
 printf("Video summary (origin signal is %s):\n", orig_sig_name);
-latencies = zeros(vid_count, 1);
+latencies = [];
 start = 1;
-for i=1:vid_count
+i = 1;
+while(1)
 
   # find pulse acquisition (or timeout)
   ndx = find(ev_log(start:end, 2) == ORIGIN_SIGNAL, 1, "first");
+  if(isempty(ndx))
+    break
+  end
   ndx = ndx + start - 1;
 
   # compute latency to frame zero
   assert(ev_log(ndx+1, 2) == FRAME_DISPLAYED);
   lat_i = ev_log(ndx+1,1) - ev_log(ndx,1);
-  latencies(i) = lat_i;
+  latencies = [latencies; lat_i];
   
   # find the video end
   vid_end = find((ev_log(ndx:end, 2) == VIDEO_FORCED_STOP)
@@ -53,6 +55,7 @@ for i=1:vid_count
 	 ev_log(vid_end-1, 3), (ev_log(vid_end-1, 1) - ev_log(ndx, 1)) / 1e6,
 	 lat_i / 1000);
   start = vid_end + 1;
+  i += 1;
 end
 
 printf("\n");

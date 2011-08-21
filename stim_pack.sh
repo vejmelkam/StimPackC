@@ -20,6 +20,9 @@ sudo /sbin/sysctl vm.drop_caches=3
 # start stim_pack
 ./stim_pack $1 $2 $3 $4 $5 $6 2> $VLCLOG | tee $SYSLOG
 
-# find the logfile from this subject
+# find the logfile from this subject and run some simple tests on it
 EVLOG=`find ev_logs -name $1-*.log`
-analysis/check_audio_problems.py $EVLOG
+analysis/check_audio_problems.py $VLCLOG
+
+# analyze the log for basic data
+analysis/sift_event_log.m $EVLOG

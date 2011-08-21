@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import sys
+import string
 
 # read lines from log file
 f = open(sys.argv[1], "r")
@@ -13,7 +14,11 @@ for line in lines:
     if string.find(line, "dropping buffer") >= 0:
         found += 1
 
-print(" ****     check audio problems script     ****\n");
-print("VLC log contains %d lines.\n" % len(lines))
-print("Audio problems noted %d times.\n" % found)
+print("\n ****     check audio problems script     ****");
+print("VLC log contains %d lines." % len(lines))
+if found < 20:
+    print("Audio problems noted %d times, no problem for 4 videos." % found)
+else:
+    print("Audio problems noted %d times !!! Check audio log and question subject." % found)
+
 
