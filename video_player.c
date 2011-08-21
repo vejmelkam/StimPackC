@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include <vlc/plugins/vlc_config.h>
+
 #include "video_player.h"
 #include "event_logger.h"
 
@@ -21,11 +23,12 @@ void vp_initialize(video_player_info * vpi)
         "--verbose=1"
     };    
     int argc = sizeof(argv) / sizeof(const char*);
-    printf("Have %d arguments to libvlc_new().\n", argc);
     vpi->inst = libvlc_new(argc, argv);
     vpi->player = libvlc_media_player_new(vpi->inst);
-}
 
+    printf("[video] libvlc reports maximum audio volume as %d, default as %d\n",
+	   AOUT_VOLUME_MAX, AOUT_VOLUME_DEFAULT);
+}
 
 
 void vp_cleanup(video_player_info * vpi)
@@ -130,7 +133,7 @@ static void unlock_callback(void *data, void *id, void *const *p_pixels)
                 r = (val & 0x00ff0000) >> 16;
                 g = (val & 0x0000ff00) >> 8;
                 b = (val & 0x000000ff);
-                pixels[y * rect.w + x] = (lookup[r] << 16) + (lookup[g] << 8) + lookup[g];
+                pixels[y * rect.w + x] = (lookup[r] << 16) + (lookup[g] << 8) + lookup[b];
             }
         }
         

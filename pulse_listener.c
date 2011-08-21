@@ -46,6 +46,8 @@ int listener_thread_func(void * data)
     // open access to the parallel port
     pl->fd = open("/dev/parport0", O_RDWR);
     assert(pl->fd >= 0);
+
+    // claim access to the PAR PORT
     ioctl(pl->fd, PPCLAIM);
     int negot_val = IEEE1284_MODE_COMPAT;
     ioctl(pl->fd, PPNEGOT, &negot_val);

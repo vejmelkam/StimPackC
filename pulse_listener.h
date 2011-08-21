@@ -24,6 +24,7 @@ extern "C" {
         PL_REQ_PULSE_ACQUIRED
     } serviced_info;
 
+
     typedef struct {
         SDL_sem * semaphore;
         SDL_Thread * listener_thread;

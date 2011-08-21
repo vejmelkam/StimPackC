@@ -49,12 +49,12 @@ int cal_video;
 
 // TESTING SETTINGS
 #define MARQUEE_FONT_SIZE 40
-#define INITIAL_PULSE_TIMEOUT (2 * 1000)
-#define REGULAR_PULSE_TIMEOUT 1000
-#define VIDEO_DURATION (5 * 1000)
-#define REST_MESSAGE_TIMEOUT 2000
-#define REST_DURATION (10*1000)
-#define VIDEO_SCENE_COUNT 4
+#define INITIAL_PULSE_TIMEOUT (1 * 1000)
+#define REGULAR_PULSE_TIMEOUT 3000
+#define VIDEO_DURATION (480 * 1000)
+#define REST_MESSAGE_TIMEOUT 5000
+#define REST_DURATION (30*1000)
+#define VIDEO_SCENE_COUNT 20
 
 
 typedef struct {
@@ -67,17 +67,27 @@ typedef struct {
 
 video_entry video_db[] = 
 {
-  { "data/videos/TP01.avi",  35, 16, 9 },
-  { "data/videos/TP02.avi",  35, 4, 3 },
-  { "data/videos/TP03.avi",  45,  4, 3 },
-  { "data/videos/TP04.avi",  45,  4, 3 },
-  { "data/videos/TP05.avi", 220, 16, 9 },
-  { "data/videos/TP06.avi",  45, 16, 9 },
-  { "data/videos/TP07.avi",  40, 16, 9 },
-  { "data/videos/TP08.avi",  35, 16, 9 },
-  { "data/videos/TP09.avi",  55, 16, 9 },
-  { "data/videos/TP10.avi",  35,  4, 3 }
+  { "data/videos/TP01.avi",  30, 16, 9 },
+  { "data/videos/TP02.avi",  30,  4, 3 },
+  { "data/videos/TP03.avi",  40,  4, 3 },
+  { "data/videos/TP04.avi",  40,  4, 3 },
+  { "data/videos/TP05.avi", 100, 16, 9 },
+  { "data/videos/TP06.avi",  40, 16, 9 },
+  { "data/videos/TP07.avi",  35, 16, 9 },
+  { "data/videos/TP08.avi",  30, 16, 9 },
+  { "data/videos/TP09.avi",  47, 16, 9 },
+  { "data/videos/TP10.avi",  30,  4, 3 }
 };
+
+
+void preload_video(const char * filename)
+{
+    char buf[1000000];
+    FILE * f = fopen(filename, "r");
+    while(!feof(f))
+        fread(buf, 1000000, 1, f);
+    fclose(f);
+}
 
 
 char * make_log_name()
@@ -87,7 +97,7 @@ char * make_log_name()
     struct tm * ti;
     time(&raw_time);
     ti = localtime(&raw_time);
-    sprintf(buf, "event_logs/%s-%04d%02d%02d-%02d%02d.log", subj_id,
+    sprintf(buf, "ev_logs/%s-%04d%02d%02d-%02d%02d.log", subj_id,
             ti->tm_year, ti->tm_mon, ti->tm_mday, ti->tm_hour, ti->tm_min);
     return buf;
 }
@@ -224,7 +234,7 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 	      // we can remove the time here, because this is the main thread
 	      SDL_RemoveTimer(timer_id);
 	      done = 1;
-	      printf("[marquee] forced stop from keyboard.\n");
+	      printf("[marquee] [%s] forced stop from keyboard.\n", string_timestamp());
 	  }
 	  break;
 
@@ -232,7 +242,7 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 	  if(event.user.code == current_scene_id)
 	  {
 	      done = 1;
-	      printf("[marquee] reached timeout.\n");
+	      printf("[marquee] [%s] reached timeout.\n", string_timestamp());
 	  }
 	  break;
 
@@ -300,7 +310,8 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
                     // we can remove the time here, because this is the main thread
                     SDL_RemoveTimer(timer_id);
                     done = 1;
-                    printf("[video] [%s] forced video stop from keyboard.\n", string_timestamp());
+		    if(log_frames)
+		      printf("[video] [%s] forced video stop from keyboard.\n", string_timestamp());
                     
                 }
                 break;
@@ -313,7 +324,8 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
                 {
                     event_logger_log_with_timestamp(LOGEVENT_VIDEO_TIMEOUT, 0);
                     done = 1;
-                    printf("[video] [%s] received timeout event.\n", string_timestamp());
+		    if(log_frames)
+		      printf("[video] [%s] received timeout event.\n", string_timestamp());
                 }
                 break;
         }
@@ -321,7 +333,6 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
     
     // stop the video player
     vp_stop(&vpi);
-
     
     return quit;
 }
@@ -347,8 +358,15 @@ int parse_argument_line(int argc, char ** argv)
     
     if(cal_video < 1 || cal_video > 10)
     {
-        printf("Invalid calibration video selected %d, must be 1..10\n", cal_video);
+        printf("Invalid calibration video selected %d, must be 1..10\n",
+	       cal_video);
         return -1;
+    }
+    else
+    {
+        printf("[stimpack] [%s] pre-loading calibration video [id %d]\n",
+	       string_timestamp(), cal_video);
+       	preload_video(video_db[cal_video-1].filename);
     }
     
     int ok = 1;
@@ -356,10 +374,21 @@ int parse_argument_line(int argc, char ** argv)
     {
         if(video_sched[i] < 1 || video_sched[i] > 10)
         {
-            printf("Invalid video %d selected (value is %d), must be 1..10\n", i+1, video_sched[i]);
+            printf("Invalid video %d selected (value is %d), must be 1..10\n",
+		   i+1, video_sched[i]);
             ok = 0;
         }
+	else
+	{
+	    printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
+		   string_timestamp(), i + 1, video_sched[i]);
+	    preload_video(video_db[i].filename);
+	}
     }
+
+    //FIXME: this is for test mode only
+    for(int i = 0; i < 10; i++)
+      preload_video(video_db[i].filename);
 
     return ok;
 }
@@ -400,8 +429,9 @@ int main(int argc, char ** argv)
 				MARQUEE_FONT_SIZE);
     if(!marquee_font)
     {
-      printf("[stimpack] [%s] cannot open required font!\n", string_timestamp());
-      return -1;
+        printf("[stimpack] [%s] cannot open required font!\n",
+	       string_timestamp());
+	return -1;
     }
     else
         printf("[stimpack] [%s] loaded liberation-sans font.\n", string_timestamp());
@@ -446,7 +476,6 @@ int main(int argc, char ** argv)
     if(play_video(ve->filename, ve->volume, VIDEO_DURATION,
 		  ve->aspect_num, ve->aspect_den, 0))
       return 1;
-    
    
     // Phase 4: we are ready to experiment
     printf("[stimpack] [%s] ready for experiment, press Enter to begin.\n", string_timestamp());
@@ -460,13 +489,22 @@ int main(int argc, char ** argv)
     for(int i = 0; i < VIDEO_SCENE_COUNT; i++)
     {
         // select new video (video_sched contains 1-based indices)
-        int video_ndx = video_sched[i] - 1;
-        
-	ve = &video_db[video_ndx];
+      //        assert(0 <= i && i < 10);
+      //	int video_ndx = video_sched[i] - 1;
+      //	ve = &video_db[video_ndx];
+
+	// FIXME: this is TEST MODE
+	int video_ndx = i % 10;
+        ve = &video_db[i % 10];
+
+       	if(play_video(ve->filename, ve->volume, 10, ve->aspect_num, 
+		      ve->aspect_den, 0))
+            return 1;
 
 	// wait for pulse
         uint32_t pulse_timeout = i == 0? INITIAL_PULSE_TIMEOUT : REGULAR_PULSE_TIMEOUT;
-	printf("[wait-for-pulse] listening on parallel port [timeout %u ms].\n", pulse_timeout);
+	printf("[wait-for-pulse] [%s] listening on parallel port [timeout %u ms].\n",
+	       string_timestamp(), pulse_timeout);
         event_logger_log_with_timestamp(LOGEVENT_WAITING_FOR_PULSE, 0);
 	switch(listen_for_pulse(&pl, pulse_timeout))
 	{
@@ -481,12 +519,17 @@ int main(int argc, char ** argv)
         
         // we have the info, clear the request flag
         pulse_listener_clear_request(&pl);
-        
+
+	// delay 80 ms to be around 130ms
+	SDL_Delay(80);
+
 	// play a video
-        fprintf(stderr, "[stimpack] [%s] playing video number %d with id %d\n", string_timestamp(), i+1, video_ndx+1);
-        printf("[video] [%s] playing video number %d, with id %d.\n", string_timestamp(), i+1, video_ndx+1);
-       	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, 
-		      ve->aspect_num, ve->aspect_den, 1))
+        fprintf(stderr, "[stimpack] [%s] playing video number %d with id %d\n",
+		string_timestamp(), i+1, video_ndx+1);
+        printf("[video] [%s] playing video number %d, with id %d, timeout %d, volume %d.\n",
+	       string_timestamp(), i+1, video_ndx+1, VIDEO_DURATION, ve->volume);
+
+       	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, ve->aspect_num, ve->aspect_den, 1))
             return 1;
 
         // 30 seconds relaxed cross fixation if not after last video

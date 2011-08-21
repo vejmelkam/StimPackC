@@ -40,10 +40,10 @@ extern "C" {
     } log_entry;
     
     
-#define LOG_ENTRIES_PER_SEGMENT 10
+#define LOG_ENTRIES_PER_SEGMENT 100000
 
     typedef struct log_segment {
-        log_entry log_entries[10];
+        log_entry log_entries[LOG_ENTRIES_PER_SEGMENT];
         int next_log_pos;
         struct log_segment* next_log_segment;
     } log_segment;
