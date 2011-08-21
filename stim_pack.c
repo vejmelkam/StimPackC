@@ -286,7 +286,7 @@ int main(int argc, char ** argv)
     render_marquee_text("Ready", &rect43, 0);
 
     // wait for first pulse
-    printf("Waiting for pulse [timeout %d ms].\n", INITIAL_PULSE_TIMEOUT);
+    printf("[wait-for-pulse] listening on parallel port [timeout %d ms].\n", INITIAL_PULSE_TIMEOUT);
     listen_for_pulse(&pl, INITIAL_PULSE_TIMEOUT);
 
     // run through the cycle many times
@@ -296,7 +296,7 @@ int main(int argc, char ** argv)
 	ve = &video_db[i % 10];
 
 	// wait for pulse
-	printf("Waiting for pulse [timeout %d ms].\n", REGULAR_PULSE_TIMEOUT);
+	printf("[wait-for-pulse] listening on parallel port [timeout %d ms].\n", REGULAR_PULSE_TIMEOUT);
 	switch(listen_for_pulse(&pl, REGULAR_PULSE_TIMEOUT))
 	{
 	case PL_REQ_TIMED_OUT:
