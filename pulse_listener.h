@@ -35,12 +35,16 @@ extern "C" {
         int exit_flag;
         serviced_info serviced_how;
         SDL_TimerID timer;
+        int log_pulses;
     } pulse_listener;
     
     void pulse_listener_initialize(pulse_listener * pl);
     
     // returns 1 if pulse was registered and 0 if the waiting thread timed out
     int listen_for_pulse(pulse_listener * pl, uint32_t timeout_ms);
+    
+    // 1 means yes, 0 means no
+    void pulse_listener_log_pulses(pulse_listener * pl, int flag);
     
     void pulse_listener_shutdown(pulse_listener * pl);
 

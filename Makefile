@@ -1,8 +1,8 @@
 
 
-CFLAGS+=-std=c99 -Wall
+CFLAGS+=-std=c99 -Wall -D_XOPEN_SOURCE=500
 CFLAGS+=-g
-SOURCES=stim_pack.c video_player.c calibration.c pulse_listener.c
+SOURCES=stim_pack.c video_player.c calibration.c pulse_listener.c event_logger.c
 DRAW_DIR=$(HOME)/Lib/SDL_Draw
 
 all: stim_pack

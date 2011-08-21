@@ -5,11 +5,14 @@
 #include "video_player.h"
 #include "calibration.h"
 #include "pulse_listener.h"
+#include "event_logger.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <time.h>
+
 
 /* global rendering variables */
 sdl_frame_info sfi;
@@ -23,16 +26,35 @@ TTF_Font * marquee_font;
 
 uint64_t next_scene_id = 0;
 
+// from argv
+char * subj_id;
+int video_sched[4];   // 4 videos
+int cal_video;
+
 
 /******     RENDERING AND TIMING PARAMETERS    ******/
 
+
+// STANDARD SETTINGS
+/*
 #define MARQUEE_FONT_SIZE 40
 #define INITIAL_PULSE_TIMEOUT (30 * 1000)
 #define REGULAR_PULSE_TIMEOUT 3000
 #define VIDEO_DURATION (480*1000)
 #define REST_MESSAGE_TIMEOUT 5000
 #define REST_DURATION (600*1000)
-#define VIDEO_SCENES 100
+#define VIDEO_SCENE_COUNT 4
+*/
+
+
+// TESTING SETTINGS
+#define MARQUEE_FONT_SIZE 40
+#define INITIAL_PULSE_TIMEOUT (2 * 1000)
+#define REGULAR_PULSE_TIMEOUT 1000
+#define VIDEO_DURATION (5 * 1000)
+#define REST_MESSAGE_TIMEOUT 2000
+#define REST_DURATION (10*1000)
+#define VIDEO_SCENE_COUNT 4
 
 
 typedef struct {
@@ -56,6 +78,83 @@ video_entry video_db[] =
   { "data/videos/TP09.avi",  55, 16, 9 },
   { "data/videos/TP10.avi",  35,  4, 3 }
 };
+
+
+char * make_log_name()
+{
+    static char buf[200];
+    time_t raw_time;
+    struct tm * ti;
+    time(&raw_time);
+    ti = localtime(&raw_time);
+    sprintf(buf, "event_logs/%s-%04d%02d%02d-%02d%02d.log", subj_id,
+            ti->tm_year, ti->tm_mon, ti->tm_mday, ti->tm_hour, ti->tm_min);
+    return buf;
+}
+
+
+char * string_timestamp()
+{
+    static char buf[100];
+    time_t raw_time;
+    struct tm * ti;
+    time(&raw_time);
+    ti = localtime(&raw_time);
+    strftime(buf, 100, "%d:%m:%Y %H:%M:%S", ti);
+    return buf;
+}
+
+
+int load_screen_and_rendering_settings()
+{
+    FILE * f = fopen("display.cfg", "r");
+    if(!f)
+    {
+        // set defaults for screen size
+        sfi.scr_rect.x = 0; sfi.scr_rect.y = 0;
+        sfi.scr_rect.w = 1024; sfi.scr_rect.h = 768;   
+        
+        // set defaults for rect 4:3
+        rect43.x = 100; rect43.y = 100; rect43.w = 640; rect43.h = 480;
+        
+        // set defaults for rect 16:9
+        rect169.x = 100; rect169.y = 100; rect169.w = 160*4; rect169.h = 90*4;
+        
+        return 1;
+    }
+    
+    if(fscanf(f, "%hd %hd %hd %hd", &sfi.scr_rect.x, &sfi.scr_rect.y, &sfi.scr_rect.w, &sfi.scr_rect.h) != 4)
+    {
+        printf("[stimpack] failed to load screen size from config file.");
+        return 0;
+    }
+    
+    if(fscanf(f, "%hd %hd %hd %hd", &rect43.x, &rect43.y, &rect43.w, &rect43.h) != 4)
+    {
+        printf("[stimpack] failed to load 4:3 initial rendering window from config file.");
+        return 0;
+    }
+
+    if(fscanf(f, "%hd %hd %hd %hd", &rect169.x, &rect169.y, &rect169.w, &rect169.h) != 4)
+    {
+        printf("[stimpack] failed to load 16:9 initial rendering window from config file.");
+        return 0;
+    }
+    
+    fclose(f);
+    
+    return 1;
+}
+
+
+void save_screen_and_rendering_settings()
+{
+    FILE * f = fopen("display.cfg", "w");
+    fprintf(f, "%hd %hd %hd %hd\n", sfi.scr_rect.x, sfi.scr_rect.y, sfi.scr_rect.w, sfi.scr_rect.h);
+    fprintf(f, "%hd %hd %hd %hd\n", rect43.x, rect43.y, rect43.w, rect43.h);
+    fprintf(f, "%hd %hd %hd %hd\n", rect169.x, rect169.y, rect169.w, rect169.h);
+    fclose(f);
+}
 
 
 void clear_screen()
@@ -86,6 +185,8 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 {
   // clear the screen
   SDL_FillRect(sfi.screen, NULL, 0x00000000);
+  
+  printf("[marquee] [%s] displaying message [%s] now.\n", string_timestamp(), text);
 
   SDL_Color white = {255, 255, 255};
   SDL_Surface * text_surf = TTF_RenderText_Solid(marquee_font, text, white);
@@ -122,7 +223,7 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 	      // we can remove the time here, because this is the main thread
 	      SDL_RemoveTimer(timer_id);
 	      done = 1;
-	      printf("[marquee] forced video stop from keyboard.\n");
+	      printf("[marquee] forced stop from keyboard.\n");
 	  }
 	  break;
 
@@ -139,13 +240,12 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 	  break;
 	}
   }
-
-  // clear the screen
-  clear_screen();
+  
+  // we do not clear screen after marquee
 }
 
 
-int play_video(const char * fname, int volume, int timeout_ms, int anum, int aden)
+int play_video(const char * fname, int volume, int timeout_ms, int anum, int aden, int log_frames)
 {
     // set the 16:9 surface for the first video
     if(anum == 16 && aden == 9)
@@ -160,8 +260,8 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
     }
     else
     {
-        // we have a problem
-      printf("Failed to find rendering rectangle for proportion %d:%d.\n", anum, aden);
+        // we have a serious problem
+        printf("[stimpack] failed to find rendering rectangle for proportion %d:%d.\n", anum, aden);
         assert(0);
     }
     
@@ -169,7 +269,7 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
     clear_screen();
 
     vp_prepare_media(&vpi, fname);
-    vp_play_with_timeout(&vpi, timeout_ms, volume);
+    vp_play_with_timeout(&vpi, timeout_ms, volume, log_frames);
     
     // make sure the stop 
     uint64_t current_scene_id = ++next_scene_id;
@@ -197,10 +297,8 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
                     // we can remove the time here, because this is the main thread
                     SDL_RemoveTimer(timer_id);
                     done = 1;
-                    printf("Forced video stop from keyboard.\n");
+                    printf("[video] [%s] forced video stop from keyboard.\n", string_timestamp());
                 }
-                else
-                    printf("Some key pressed.\n");
                 break;
 
             case SCENE_TIMEOUT_EVENT:
@@ -210,7 +308,7 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
                 if(event.user.code == current_scene_id)
                 {
                     done = 1;
-                    printf("[video] received timeout event.\n");
+                    printf("[video] [%s] received timeout event.\n", string_timestamp());
                 }
                 break;
         }
@@ -224,28 +322,86 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
 }
 
 
+
+int parse_argument_line(int argc, char ** argv)
+{
+    // parse parameters from command line
+    if(argc != 7)
+    {
+        printf("Usage: stim_pack subj_id cal_video v1 v2 v3 v4\n");
+        return 0;
+    }
+
+    // read & check args
+    subj_id = argv[1];
+    cal_video = atoi(argv[2]);
+    video_sched[0] = atoi(argv[3]);
+    video_sched[1] = atoi(argv[4]);
+    video_sched[2] = atoi(argv[5]);
+    video_sched[3] = atoi(argv[6]);
+    
+    if(cal_video < 1 || cal_video > 10)
+    {
+        printf("Invalid calibration video selected %d, must be 1..10\n", cal_video);
+        return -1;
+    }
+    
+    int ok = 1;
+    for(int i = 0; i < 4; i++)
+    {
+        if(video_sched[i] < 1 || video_sched[i] > 10)
+        {
+            printf("Invalid video %d selected (value is %d), must be 1..10\n", i+1, video_sched[i]);
+            ok = 0;
+        }
+    }
+
+    return ok;
+}
+
 int main(int argc, char ** argv)
 {
+    // set mode for stdio output
+    setvbuf(stdout, 0, _IOLBF, 1024);
+    
+    // parse arguments
+    if(!parse_argument_line(argc, argv))
+        return -1;
+    
+    printf("[stimpack] [%s] stim_pack C version is starting up.\n", string_timestamp());
+    printf("Subject id: %s cal_video: %d schedule: %d %d %d %d\n",
+            subj_id, cal_video, video_sched[0], video_sched[1], video_sched[2], video_sched[3]);
+
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTTHREAD | SDL_INIT_TIMER) == -1)
     {
-        printf("cannot initialize SDL\n");
+        printf("[stimpack] cannot initialize SDL\n");
         return -1;
     }
 
     if(TTF_Init() == -1)
     {
-      printf("Failed to initialize font subsystem!\n");
+      printf("[stimpack] failed to initialize TTF font subsystem!\n");
+      return -1;
     }
+    
+    printf("[stimpack] SDL initialized, TTF initialized\n");
+    
+    // initialize logging system
+    event_logger_initialize();
 
     // load font
     marquee_font = TTF_OpenFont("fonts/LiberationSans-Bold.ttf",
 				MARQUEE_FONT_SIZE);
     if(!marquee_font)
-      printf("Could not open font!\n");
+    {
+      printf("[stimpack] [%s] cannot open required font!\n", string_timestamp());
+      return -1;
+    }
+    else
+        printf("[stimpack] [%s] loaded liberation-sans font.\n", string_timestamp());
 
-    // initialize screen rectangle
-    sfi.scr_rect.x = 0; sfi.scr_rect.y = 0;
-    sfi.scr_rect.w = 1024; sfi.scr_rect.h = 768;   
+    // load from file or set defaults if no file found
+    load_screen_and_rendering_settings();
 
     // options taken from example @ libvlc
     int options = SDL_ANYFORMAT | SDL_DOUBLEBUF | SDL_NOFRAME;
@@ -262,42 +418,49 @@ int main(int argc, char ** argv)
     pulse_listener_initialize(&pl);
     
     // Phase 1 screen calibration for screen rectangle 4:3
-    rect43.x = 100; rect43.y = 100; rect43.w = 640; rect43.h = 480;
     if(calibrate_rendering_target_rect(sfi.screen, &rect43, 4.0/3.0))
         return 0;
     
     // Phase 2 screen calibration for screen rectangle 16:9
-    rect169.x = 100; rect169.y = 100; rect169.w = 160*4; rect169.h = 90*4;
     if(calibrate_rendering_target_rect(sfi.screen, &rect169, 16.0/9.0))
         return 0;
     
     // we construct 4:3 and 16:9 surft occurred in video playback, reqaces
     surf43 = SDL_CreateRGBSurface(SDL_SWSURFACE, rect43.w, rect43.h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0);
     surf169 = SDL_CreateRGBSurface(SDL_SWSURFACE, rect169.w, rect169.h, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0);
-
     
+    // save whatever we have calibrated for next session
+    printf("[stimpack] [%s] saving calibration results.\n", string_timestamp());
+    save_screen_and_rendering_settings();
+
     // Phase 3: sound level calibration
-    video_entry * ve = &video_db[6];
+    printf("[stimpack] [%s] playing calibration video %d.\n", string_timestamp(), cal_video);
+    fprintf(stderr, "[stimpack] [%s] playing calibration video %d, press Enter to terminate.\n", string_timestamp(), cal_video);
+    video_entry * ve = &video_db[cal_video - 1];
     if(play_video(ve->filename, ve->volume, VIDEO_DURATION,
-		  ve->aspect_num, ve->aspect_den))
+		  ve->aspect_num, ve->aspect_den, 0))
       return 1;
+    
    
     // Phase 4: we are ready to experiment
+    printf("[stimpack] [%s] ready for experiment, press Enter to begin.\n", string_timestamp());
     render_marquee_text("Ready", &rect43, 0);
 
-    // wait for first pulse
-    printf("[wait-for-pulse] listening on parallel port [timeout %d ms].\n", INITIAL_PULSE_TIMEOUT);
-    listen_for_pulse(&pl, INITIAL_PULSE_TIMEOUT);
-
+    // we start logging pulses now
+    pulse_listener_log_pulses(&pl, 1);
+    
     // run through the cycle many times
-    for(int i = 0; i < VIDEO_SCENES; i++)
+    for(int i = 0; i < VIDEO_SCENE_COUNT; i++)
     {
-        // select new video
-	ve = &video_db[i % 10];
+        // select new video (video_sched contains 1-based indices)
+        int video_ndx = video_sched[i] - 1;
+        
+	ve = &video_db[video_ndx];
 
 	// wait for pulse
-	printf("[wait-for-pulse] listening on parallel port [timeout %d ms].\n", REGULAR_PULSE_TIMEOUT);
-	switch(listen_for_pulse(&pl, REGULAR_PULSE_TIMEOUT))
+        uint32_t pulse_timeout = i == 0? INITIAL_PULSE_TIMEOUT : REGULAR_PULSE_TIMEOUT;
+	printf("[wait-for-pulse] listening on parallel port [timeout %u ms].\n", pulse_timeout);
+	switch(listen_for_pulse(&pl, pulse_timeout))
 	{
 	case PL_REQ_TIMED_OUT:
 	  printf("[wait-for-pulse] timed out waiting for pulse.\n");
@@ -309,25 +472,36 @@ int main(int argc, char ** argv)
 	}
         
 	// play a video
+        fprintf(stderr, "[stimpack] [%s] playing video number %d with id %d\n", string_timestamp(), i+1, video_ndx+1);
+        printf("[stimpack] [%s] playing video number %d, with id %d.\n", string_timestamp(), i+1, video_ndx+1);
        	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, 
-		      ve->aspect_num, ve->aspect_den))
+		      ve->aspect_num, ve->aspect_den, 1))
             return 1;
 
         // 30 seconds relaxed cross fixation if not after last video
-	if(i < VIDEO_SCENES - 1)
+        // after last video, we go directly to rest message
+	if(i < VIDEO_SCENE_COUNT - 1)
 	  render_marquee_text("+", &rect43, INITIAL_PULSE_TIMEOUT);
     }
 
     // show message that rest is coming up
-    printf("[experiment] videos are done, showing rest banner.\n");
+    printf("[stimpack] [%s] videos are done, showing rest banner.\n", string_timestamp());
     render_marquee_text("10MIN KLID", &rect43, REST_MESSAGE_TIMEOUT);
 
     // render the cross for the resting state
-    printf("[experiment] entering rest stage.\n");
+    printf("[stimpack] [%s] entering rest stage.\n", string_timestamp());
     render_marquee_text("+", &rect43, REST_DURATION);
     
+    // stop listening for pulses
+    pulse_listener_log_pulses(&pl, 0);
+
     // we're done
-    printf("Experiment completed, cleaning up.\n");
+    printf("[stimpack] [%s] experiment completed, cleaning up.\n", string_timestamp());
+    
+    // save the event log
+    char * log_name = make_log_name();
+    printf("[stimpack] [%s] saving log to file [%s].\n", string_timestamp(), log_name);
+    event_logger_save_log(log_name);
     
     // cleanup the system
     vp_cleanup(&vpi);
@@ -336,6 +510,8 @@ int main(int argc, char ** argv)
     // shutdown font lib
     TTF_CloseFont(marquee_font); marquee_font = 0;
     TTF_Quit();
-
+    
+    printf("[stimpack] [%s] bye bye.\n", string_timestamp());
+    
     return 0;
 }

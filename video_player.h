@@ -40,13 +40,15 @@ extern "C" {
         uint32_t end_time;
         int nominal_volume;
         int block_screen_updates;
+        int current_frame_ndx;
+        int log_frames;
     } video_player_info;
     
 
     void vp_initialize(video_player_info * vpi);    
     void vp_cleanup(video_player_info * vpi);
     void vp_prepare_media(video_player_info * vpi, const char * filename);
-    void vp_play_with_timeout(video_player_info* vpi, unsigned int timeout_ms, int volume);
+    void vp_play_with_timeout(video_player_info* vpi, unsigned int timeout_ms, int volume, int log_frames);
     void vp_stop(video_player_info* vpi);
     void vp_release_media(video_player_info * vpi);
     

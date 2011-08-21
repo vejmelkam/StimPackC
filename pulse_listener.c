@@ -1,6 +1,7 @@
 
 
 #include "pulse_listener.h"
+#include "event_logger.h"
 
 #include <linux/parport.h>
 #include <linux/ppdev.h>
@@ -18,6 +19,12 @@ void clear_pulse_register(pulse_listener * pl)
 {
     int ret;
     ioctl(pl->fd, PPCLRIRQ, &ret);
+}
+
+
+void pulse_listener_log_pulses(pulse_listener * pl, int flag)
+{
+    pl->log_pulses = flag;
 }
 
 
@@ -47,9 +54,11 @@ int listener_thread_func(void * data)
         FD_SET (pl->fd, &rfds);
         int ret_val = select (pl->fd + 1, &rfds, NULL, NULL, &timeout);
 
-        // if we were signalled, activate the semaphore
+        // if we were signalled, post the semaphore
         if(ret_val > 0)
         {
+            // if the pulse was requested by the main program, check if we
+            // got to it first before timeout
             SDL_LockMutex(pl->semaphore_mutex);
             if(pl->serviced_how == PL_REQ_NOT_SERVICED)
             {
@@ -59,7 +68,13 @@ int listener_thread_func(void * data)
                 // we post the finding to the wait_for_pulse() method via semaphore
                 SDL_SemPost(pl->semaphore);
             }
+            
+            // log the pulse occurring event if this logging is requested
+            if(pl->log_pulses)
+                event_logger_log_with_timestamp(LOGEVENT_PULSE_ACQUIRED, 0);
+
             SDL_UnlockMutex(pl->semaphore_mutex);
+            
         }
     }
     
@@ -76,6 +91,7 @@ void pulse_listener_initialize(pulse_listener* pl)
     pl->listener_thread = SDL_CreateThread(listener_thread_func, pl);
     pl->serviced_how = PL_REQ_NOT_SERVICED;
     pl->timer = 0;
+    pl->log_pulses = 0;
 }
 
 
@@ -89,6 +105,11 @@ uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
         pl->serviced_how = PL_REQ_TIMED_OUT;
         SDL_SemPost(pl->semaphore);
     }
+    
+        // log the pulse occurring event if this logging is requested
+    if(pl->log_pulses)
+        event_logger_log_with_timestamp(LOGEVENT_PULSE_TIMED_OUT, 0);
+
     SDL_UnlockMutex(pl->semaphore_mutex);
     
     // we do not wish to renew the timer

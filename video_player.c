@@ -7,7 +7,7 @@
 #include <math.h>
 
 #include "video_player.h"
-
+#include "event_logger.h"
 
 static void  display_callback(void *data, void *id);
 static void  unlock_callback(void *data, void *id, void *const *p_pixels);
@@ -61,7 +61,7 @@ void vp_prepare_media(video_player_info * vpi, const char * filename)
 }
 
 
-void vp_play_with_timeout(video_player_info * vpi, uint32_t timeout_ms, int volume)
+void vp_play_with_timeout(video_player_info * vpi, uint32_t timeout_ms, int volume, int log_frames)
 {
     assert(vpi->player);
     
@@ -70,6 +70,8 @@ void vp_play_with_timeout(video_player_info * vpi, uint32_t timeout_ms, int volu
     vpi->start_time = SDL_GetTicks();
     vpi->end_time = vpi->start_time + timeout_ms;
     vpi->nominal_volume = volume;
+    vpi->current_frame_ndx = 0;
+    vpi->log_frames = log_frames;
     
     // send commands to media player
     libvlc_media_player_play(vpi->player);
@@ -150,10 +152,14 @@ static void display_callback(void *data, void *id)
 {
     video_player_info * vpi = data;
     sdl_frame_info * sfi = vpi->sfi;
-
+    
     /* VLC wants to display the video */
     if(!vpi->block_screen_updates)
+    {
+        if(vpi->log_frames)
+                event_logger_log_with_timestamp(LOGEVENT_VIDEO_FRAME_DISPLAYED, vpi->current_frame_ndx++);
         SDL_Flip(sfi->screen);
+    }
     
     assert(id == NULL);
 }

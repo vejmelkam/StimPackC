@@ -6,9 +6,15 @@
         <df name="videos">
         </df>
       </df>
+      <df name="fonts">
+      </df>
+      <df name="logs">
+      </df>
       <in>SDL_draw.h</in>
       <in>calibration.c</in>
       <in>calibration.h</in>
+      <in>event_logger.c</in>
+      <in>event_logger.h</in>
       <in>pulse_listener.c</in>
       <in>pulse_listener.h</in>
       <in>stim_pack.c</in>
@@ -39,6 +45,11 @@
           <buildCommand>${MAKE} -f Makefile</buildCommand>
           <cleanCommand>${MAKE} -f Makefile clean</cleanCommand>
           <executablePath>stim_pack</executablePath>
+          <cTool>
+            <preprocessorList>
+              <Elem>_XOPEN_SOURCE=500</Elem>
+            </preprocessorList>
+          </cTool>
         </makeTool>
       </makefileType>
     </conf>
