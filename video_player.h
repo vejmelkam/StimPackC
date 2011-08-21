@@ -51,7 +51,7 @@ extern "C" {
     void vp_release_media(video_player_info * vpi);
     
 
-#define VIDEO_PLAYBACK_TIMEOUT_EVENT (SDL_USEREVENT)
+#define SCENE_TIMEOUT_EVENT (SDL_USEREVENT)
 #define VLC_FLIP_REQUEST (SDL_USEREVENT+1)
 
 #ifdef	__cplusplus

@@ -80,11 +80,11 @@ void vp_play_with_timeout(video_player_info * vpi, uint32_t timeout_ms, int volu
 void vp_stop(video_player_info* vpi)
 {
     assert(vpi->player);
-    printf("Stopping player %ux vp_stop.\n", (void*)vpi->player);
+    //    printf("Stopping player %ux vp_stop.\n", (void*)vpi->player);
     libvlc_media_player_release(vpi->player);
     vpi->block_screen_updates = 1;
     vpi->player = 0;
-    printf("Player stopped in vp_stop.\n");
+    //    printf("Player stopped in vp_stop.\n");
 }
 
 

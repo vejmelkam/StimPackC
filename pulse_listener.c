@@ -12,6 +12,8 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <assert.h>
+
 void clear_pulse_register(pulse_listener * pl)
 {
     int ret;
@@ -25,6 +27,7 @@ int listener_thread_func(void * data)
     
     // open access to the parallel port
     pl->fd = open("/dev/parport0", O_RDWR);
+    assert(pl->fd >= 0);
     ioctl(pl->fd, PPCLAIM);
     int negot_val = IEEE1284_MODE_COMPAT;
     ioctl(pl->fd, PPNEGOT, &negot_val);
@@ -57,8 +60,6 @@ int listener_thread_func(void * data)
                 SDL_SemPost(pl->semaphore);
             }
             SDL_UnlockMutex(pl->semaphore_mutex);
-            
-            printf("Have pulse from /dev/parport0.\n");
         }
     }
     
@@ -82,17 +83,11 @@ uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
 {
     pulse_listener * pl = data;
     
-    
-    printf("pulse_listener_timed_out: in function.\n");
-   
     SDL_LockMutex(pl->semaphore_mutex);
     if(pl->serviced_how == PL_REQ_NOT_SERVICED)
     {
         pl->serviced_how = PL_REQ_TIMED_OUT;
         SDL_SemPost(pl->semaphore);
-
-        printf("pulse_listener_timed_out: i'm signalling semaphore.\n");
-        fflush(stdout);
     }
     SDL_UnlockMutex(pl->semaphore_mutex);
     
@@ -115,9 +110,6 @@ int listen_for_pulse(pulse_listener * pl, uint32_t timeout_ms)
     
     // we wait for the semaphore indefinitely
     SDL_SemWait(pl->semaphore);
-
-    printf("Returning from listen_for_pulse() after semaphore cleared.\n");
-    fflush(stdout);
 
     return pl->serviced_how;
 }

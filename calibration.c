@@ -28,7 +28,6 @@ int calibrate_rendering_target_rect(SDL_Surface * surf, SDL_Rect * rect, double 
 {
     SDL_PixelFormat * fmt = surf->format;
     uint32_t black_col = SDL_MapRGB(fmt, 0, 0, 0);
-    uint32_t white_col = SDL_MapRGB(fmt, 255, 255, 255);
     uint32_t red_col = SDL_MapRGB(fmt, 255, 40, 40);
     uint32_t green_col = SDL_MapRGB(fmt, 40, 255, 40);
     uint32_t yellow_col = SDL_MapRGB(fmt, 255, 255, 40);
@@ -72,7 +71,7 @@ int calibrate_rendering_target_rect(SDL_Surface * surf, SDL_Rect * rect, double 
                         } else continue;
 
                     case SDLK_RIGHT:
-                        if(r2.x < r2.w - 10)
+                        if(r2.x + r2.w < surf->w - 10)
                         {
                             r2.x += 10;
                             break;
@@ -86,7 +85,7 @@ int calibrate_rendering_target_rect(SDL_Surface * surf, SDL_Rect * rect, double 
                         } else continue;
 
                     case SDLK_DOWN:
-                        if(r2.y < surf->h - 10)
+                        if(r2.y + r2.h < surf->h - 10)
                         {
                             r2.y += 10;
                             break;
