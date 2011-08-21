@@ -100,7 +100,7 @@ char * string_timestamp()
     struct tm * ti;
     time(&raw_time);
     ti = localtime(&raw_time);
-    strftime(buf, 100, "%d:%m:%Y %H:%M:%S", ti);
+    strftime(buf, 100, "%H:%M:%S", ti);
     return buf;
 }
 
@@ -187,6 +187,7 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
   SDL_FillRect(sfi.screen, NULL, 0x00000000);
   
   printf("[marquee] [%s] displaying message [%s] now.\n", string_timestamp(), text);
+  event_logger_log_with_timestamp(LOGEVENT_MARQUEE_START, 0);
 
   SDL_Color white = {255, 255, 255};
   SDL_Surface * text_surf = TTF_RenderText_Solid(marquee_font, text, white);
@@ -241,6 +242,7 @@ void render_marquee_text(const char * text, SDL_Rect * tgt_rect,
 	}
   }
   
+  event_logger_log_with_timestamp(LOGEVENT_MARQUEE_DONE, 0);
   // we do not clear screen after marquee
 }
 
@@ -267,7 +269,7 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
     
     // clear surface
     clear_screen();
-
+    
     vp_prepare_media(&vpi, fname);
     vp_play_with_timeout(&vpi, timeout_ms, volume, log_frames);
     
@@ -294,10 +296,12 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
             case SDL_KEYDOWN:
                 if(event.key.keysym.sym == SDLK_RETURN)
                 {
+                    event_logger_log_with_timestamp(LOGEVENT_VIDEO_FORCED_STOP, 0);
                     // we can remove the time here, because this is the main thread
                     SDL_RemoveTimer(timer_id);
                     done = 1;
                     printf("[video] [%s] forced video stop from keyboard.\n", string_timestamp());
+                    
                 }
                 break;
 
@@ -307,6 +311,7 @@ int play_video(const char * fname, int volume, int timeout_ms, int anum, int ade
                 // is for us
                 if(event.user.code == current_scene_id)
                 {
+                    event_logger_log_with_timestamp(LOGEVENT_VIDEO_TIMEOUT, 0);
                     done = 1;
                     printf("[video] [%s] received timeout event.\n", string_timestamp());
                 }
@@ -388,7 +393,8 @@ int main(int argc, char ** argv)
     
     // initialize logging system
     event_logger_initialize();
-
+    event_logger_log_with_timestamp(LOGEVENT_SYSTEM_STARTED, 0);
+    
     // load font
     marquee_font = TTF_OpenFont("fonts/LiberationSans-Bold.ttf",
 				MARQUEE_FONT_SIZE);
@@ -448,6 +454,7 @@ int main(int argc, char ** argv)
 
     // we start logging pulses now
     pulse_listener_log_pulses(&pl, 1);
+    event_logger_log_with_timestamp(LOGEVENT_EXPERIMENT_STARTED, 0);
     
     // run through the cycle many times
     for(int i = 0; i < VIDEO_SCENE_COUNT; i++)
@@ -460,20 +467,24 @@ int main(int argc, char ** argv)
 	// wait for pulse
         uint32_t pulse_timeout = i == 0? INITIAL_PULSE_TIMEOUT : REGULAR_PULSE_TIMEOUT;
 	printf("[wait-for-pulse] listening on parallel port [timeout %u ms].\n", pulse_timeout);
+        event_logger_log_with_timestamp(LOGEVENT_WAITING_FOR_PULSE, 0);
 	switch(listen_for_pulse(&pl, pulse_timeout))
 	{
 	case PL_REQ_TIMED_OUT:
-	  printf("[wait-for-pulse] timed out waiting for pulse.\n");
+	  printf("[wait-for-pulse] [%s] timed out waiting for pulse.\n", string_timestamp());
 	  break;
 
 	case PL_REQ_PULSE_ACQUIRED:
-	  printf("[wait-for-pulse] pulse received.\n");
+	  printf("[wait-for-pulse] [%s] pulse received.\n", string_timestamp());
 	  break;
 	}
         
+        // we have the info, clear the request flag
+        pulse_listener_clear_request(&pl);
+        
 	// play a video
         fprintf(stderr, "[stimpack] [%s] playing video number %d with id %d\n", string_timestamp(), i+1, video_ndx+1);
-        printf("[stimpack] [%s] playing video number %d, with id %d.\n", string_timestamp(), i+1, video_ndx+1);
+        printf("[video] [%s] playing video number %d, with id %d.\n", string_timestamp(), i+1, video_ndx+1);
        	if(play_video(ve->filename, ve->volume, VIDEO_DURATION, 
 		      ve->aspect_num, ve->aspect_den, 1))
             return 1;
@@ -496,6 +507,7 @@ int main(int argc, char ** argv)
     pulse_listener_log_pulses(&pl, 0);
 
     // we're done
+    event_logger_log_with_timestamp(LOGEVENT_EXPERIMENT_ENDED, 0);
     printf("[stimpack] [%s] experiment completed, cleaning up.\n", string_timestamp());
     
     // save the event log

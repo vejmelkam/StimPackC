@@ -25,6 +25,17 @@ void clear_pulse_register(pulse_listener * pl)
 void pulse_listener_log_pulses(pulse_listener * pl, int flag)
 {
     pl->log_pulses = flag;
+    
+    // clear the pulse register from any previous waiting pulses
+    SDL_LockMutex(pl->service_mutex);
+    clear_pulse_register(pl);
+    SDL_UnlockMutex(pl->service_mutex);
+}
+
+
+void pulse_listener_clear_request(pulse_listener * pl)
+{
+    pl->serviced_how = PL_REQ_NO_REQUEST;
 }
 
 
@@ -59,22 +70,24 @@ int listener_thread_func(void * data)
         {
             // if the pulse was requested by the main program, check if we
             // got to it first before timeout
-            SDL_LockMutex(pl->semaphore_mutex);
+            SDL_LockMutex(pl->service_mutex);
             if(pl->serviced_how == PL_REQ_NOT_SERVICED)
-            {
                 // we have acquired a pulse
                 pl->serviced_how = PL_REQ_PULSE_ACQUIRED;
-                               
+            SDL_UnlockMutex(pl->service_mutex);
+
+            // if we got the pulse before timeout, send out notifications
+            if(pl->serviced_how == PL_REQ_PULSE_ACQUIRED)
                 // we post the finding to the wait_for_pulse() method via semaphore
                 SDL_SemPost(pl->semaphore);
-            }
-            
+
             // log the pulse occurring event if this logging is requested
             if(pl->log_pulses)
                 event_logger_log_with_timestamp(LOGEVENT_PULSE_ACQUIRED, 0);
 
-            SDL_UnlockMutex(pl->semaphore_mutex);
-            
+            // clear any lingering pulses (echos)
+            SDL_Delay(1);
+            clear_pulse_register(pl);
         }
     }
     
@@ -86,10 +99,10 @@ void pulse_listener_initialize(pulse_listener* pl)
 {
     pl->fd = -1;
     pl->semaphore = SDL_CreateSemaphore(0);
-    pl->semaphore_mutex = SDL_CreateMutex();
+    pl->service_mutex = SDL_CreateMutex();
     pl->exit_flag = 0;
     pl->listener_thread = SDL_CreateThread(listener_thread_func, pl);
-    pl->serviced_how = PL_REQ_NOT_SERVICED;
+    pl->serviced_how = PL_REQ_NO_REQUEST;
     pl->timer = 0;
     pl->log_pulses = 0;
 }
@@ -99,19 +112,23 @@ uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
 {
     pulse_listener * pl = data;
     
-    SDL_LockMutex(pl->semaphore_mutex);
+    SDL_LockMutex(pl->service_mutex);
     if(pl->serviced_how == PL_REQ_NOT_SERVICED)
     {
         pl->serviced_how = PL_REQ_TIMED_OUT;
-        SDL_SemPost(pl->semaphore);
     }
+    SDL_UnlockMutex(pl->service_mutex);
     
-        // log the pulse occurring event if this logging is requested
-    if(pl->log_pulses)
-        event_logger_log_with_timestamp(LOGEVENT_PULSE_TIMED_OUT, 0);
+    if(pl->serviced_how == PL_REQ_TIMED_OUT)
+    {
+        SDL_SemPost(pl->semaphore);
 
-    SDL_UnlockMutex(pl->semaphore_mutex);
-    
+        // only log the pulse if we were servicing a request
+        // SDL may call this function twice from one AddTimer call
+        if(pl->log_pulses)
+           event_logger_log_with_timestamp(LOGEVENT_PULSE_TIMED_OUT, 0);
+    }
+        
     // we do not wish to renew the timer
     return 0;
 }
@@ -144,10 +161,9 @@ void pulse_listener_shutdown(pulse_listener* pl)
     SDL_WaitThread(pl->listener_thread, &status);
     
     // clean up after ourselves
-    SDL_DestroyMutex(pl->semaphore_mutex); 
-    pl->semaphore_mutex = 0;
+    SDL_DestroyMutex(pl->service_mutex); 
+    pl->service_mutex = 0;
     SDL_DestroySemaphore(pl->semaphore);
     
     close(pl->fd);
 }
-

@@ -18,22 +18,19 @@ extern "C" {
     
     typedef enum
     {
+        PL_REQ_NO_REQUEST,
         PL_REQ_NOT_SERVICED,
         PL_REQ_TIMED_OUT,
         PL_REQ_PULSE_ACQUIRED
     } serviced_info;
-    
-    // constants which may be assigned to the serviced enum
-#define PL_REQ_TIMED_OUT 1
-#define PL_REQ_PULSE_ACQUIRED 2
 
     typedef struct {
         SDL_sem * semaphore;
         SDL_Thread * listener_thread;
-        SDL_mutex * semaphore_mutex;
+        SDL_mutex * service_mutex;
         int fd;
         int exit_flag;
-        serviced_info serviced_how;
+        volatile serviced_info serviced_how;
         SDL_TimerID timer;
         int log_pulses;
     } pulse_listener;
@@ -42,6 +39,8 @@ extern "C" {
     
     // returns 1 if pulse was registered and 0 if the waiting thread timed out
     int listen_for_pulse(pulse_listener * pl, uint32_t timeout_ms);
+    
+    void pulse_listener_clear_request(pulse_listener * pl);
     
     // 1 means yes, 0 means no
     void pulse_listener_log_pulses(pulse_listener * pl, int flag);
