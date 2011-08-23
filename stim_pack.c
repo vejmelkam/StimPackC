@@ -13,7 +13,7 @@
 #include <math.h>
 #include <time.h>
 
-#define PRODUCTION_CODE 
+//#define PRODUCTION_CODE 
 
 
 /* global rendering variables */
@@ -42,6 +42,7 @@ int cal_video;
 #define INITIAL_PULSE_TIMEOUT 0
 #define REGULAR_PULSE_TIMEOUT 3000
 #define VIDEO_DURATION (480*1000)
+#define INTERVIDEO_REST_DURATION (30*1000)
 #define REST_MESSAGE_TIMEOUT 5000
 #define REST_DURATION (600*1000)
 #define VIDEO_SCENE_COUNT 4
@@ -51,9 +52,10 @@ int cal_video;
 #define MARQUEE_FONT_SIZE 40
 #define INITIAL_PULSE_TIMEOUT 1000
 #define REGULAR_PULSE_TIMEOUT 500
-#define VIDEO_DURATION (15 * 1000)
-#define REST_MESSAGE_TIMEOUT 2000
-#define REST_DURATION (2*1000)
+#define VIDEO_DURATION (10 * 1000)
+#define INTERVIDEO_REST_DURATION (5*1000)
+#define REST_MESSAGE_TIMEOUT (5*000)
+#define REST_DURATION (10*1000)
 #define VIDEO_SCENE_COUNT 10
 
 #endif // PRODUCTION_CODE
@@ -69,16 +71,16 @@ typedef struct {
 
 video_entry video_db[] = 
 {
-  { "data/videos/TP01.avi",  30,  0, 16, 9 },
-  { "data/videos/TP02.avi",  30, 40, 4, 3 },
-  { "data/videos/TP03.avi",  40, 50, 4, 3 },
-  { "data/videos/TP04.avi",  40, 70, 4, 3 },
-  { "data/videos/TP05.avi", 100, 75, 16, 9 },
-  { "data/videos/TP06.avi",  40, 65, 16, 9 },
-  { "data/videos/TP07.avi",  35, 70, 16, 9 },
-  { "data/videos/TP08.avi",  30, 80, 16, 9 },
-  { "data/videos/TP09.avi",  47, 35, 16, 9 },
-  { "data/videos/TP10.avi",  30, 75,  4, 3 }
+  { "data/videos/TP01_640.avi",  30,  0, 16, 9 },
+  { "data/videos/TP02_640.avi",  30, 40, 4, 3 },
+  { "data/videos/TP03_640.avi",  40, 50, 4, 3 },
+  { "data/videos/TP04_640.avi",  40, 70, 4, 3 },
+  { "data/videos/TP05_640.avi", 100, 75, 16, 9 },
+  { "data/videos/TP06_640.avi",  40, 65, 16, 9 },
+  { "data/videos/TP07_640.avi",  35, 70, 16, 9 },
+  { "data/videos/TP08_640.avi",  30, 80, 16, 9 },
+  { "data/videos/TP09_640.avi",  47, 35, 16, 9 },
+  { "data/videos/TP10_640.avi",  30, 75,  4, 3 }
 };
 
 
@@ -407,7 +409,7 @@ int main(int argc, char ** argv)
 #ifdef PRODUCTION_CODE
     printf("[stimpack] ***** this version is production code *****\n");
 #else
-    printf("[stimpack] ***** THIS VERSION IS TEST CODE, NOT FOR USE *****\n");
+    printf("\033[91m[stimpack] ***** THIS VERSION IS TEST CODE, NOT FOR USE *****\033[0m\n");
 #endif
 
     printf("Subject id: %s cal_video: %d schedule: %d %d %d %d\n",
@@ -548,7 +550,7 @@ int main(int argc, char ** argv)
         // 30 seconds relaxed cross fixation if not after last video
         // after last video, we go directly to rest message
 	if(i < VIDEO_SCENE_COUNT - 1)
-	  render_marquee_text("+", &rect43, INITIAL_PULSE_TIMEOUT);
+	  render_marquee_text("+", &rect43, INTERVIDEO_REST_DURATION);
     }
 
     // show message that rest is coming up

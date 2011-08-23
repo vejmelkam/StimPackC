@@ -15,20 +15,20 @@ extern "C" {
     
     typedef enum {
         
-        LOGEVENT_SYSTEM_STARTED,
-        LOGEVENT_CALIBRATION_STARTED,
-        LOGEVENT_EXPERIMENT_STARTED,
-        LOGEVENT_EXPERIMENT_ENDED,
+        LOGEVENT_SYSTEM_STARTED,             // 0
+        LOGEVENT_CALIBRATION_STARTED,        // 1
+        LOGEVENT_EXPERIMENT_STARTED,         // 2
+        LOGEVENT_EXPERIMENT_ENDED,           // 3
                 
-        LOGEVENT_MARQUEE_START,
-        LOGEVENT_MARQUEE_DONE,
+        LOGEVENT_MARQUEE_START,              // 4
+        LOGEVENT_MARQUEE_DONE,               // 5
                 
-        LOGEVENT_VIDEO_FRAME_DISPLAYED,
-        LOGEVENT_VIDEO_TIMEOUT,
-        LOGEVENT_VIDEO_FORCED_STOP,
-        LOGEVENT_WAITING_FOR_PULSE,
-        LOGEVENT_PULSE_ACQUIRED,
-        LOGEVENT_PULSE_TIMED_OUT,
+        LOGEVENT_VIDEO_FRAME_DISPLAYED,      // 6
+        LOGEVENT_VIDEO_TIMEOUT,              // 7
+        LOGEVENT_VIDEO_FORCED_STOP,          // 8
+        LOGEVENT_WAITING_FOR_PULSE,          // 9
+        LOGEVENT_PULSE_ACQUIRED,             // 10
+        LOGEVENT_PULSE_TIMED_OUT,            // 11
                
     } logged_event_code;
 
