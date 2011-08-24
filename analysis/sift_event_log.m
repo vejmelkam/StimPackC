@@ -35,15 +35,16 @@ i = 1;
 while(1)
 
   # find pulse acquisition (or timeout)
-  ndx = find(ev_log(start:end, 2) == ORIGIN_SIGNAL, 1, "first");
+  ndx = find((ev_log(start:end, 2) == FRAME_DISPLAYED) .*
+	     (ev_log(start:end, 3) == 0), 1, "first");
   if(isempty(ndx))
     break
   end
   ndx = ndx + start - 1;
 
   # compute latency to frame zero
-  assert(ev_log(ndx+1, 2) == FRAME_DISPLAYED);
-  lat_i = ev_log(ndx+1,1) - ev_log(ndx,1);
+  assert(ev_log(ndx-1, 2) == ORIGIN_SIGNAL);
+  lat_i = ev_log(ndx,1) - ev_log(ndx-1,1);
   latencies = [latencies; lat_i];
   
   # find the video end

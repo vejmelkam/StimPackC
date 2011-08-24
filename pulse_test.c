@@ -72,6 +72,10 @@ int main(int argc, char ** argv)
 	    printf("[wait-for-pulse] [%s] pulse received.\n",
 		   string_timestamp());
 	    break;
+
+	default:
+	  printf("No flag set!\n");
+	  break;
 	}
         
         // we have the info, clear the request flag

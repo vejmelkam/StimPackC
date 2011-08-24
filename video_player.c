@@ -18,9 +18,10 @@ static void* lock_callback(void *data, void **p_pixels);
 void vp_initialize(video_player_info * vpi)
 {       
     char const *argv[] = {
-        "--alsa-caching=20000", /* skip any audio track */
+        "--file-caching=20000",
+	"--aout=oss",
         "--no-xlib",
-        "--verbose=1"
+        "--verbose=4"
     };    
     int argc = sizeof(argv) / sizeof(const char*);
     vpi->inst = libvlc_new(argc, argv);

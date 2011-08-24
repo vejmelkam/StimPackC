@@ -35,7 +35,9 @@ void pulse_listener_log_pulses(pulse_listener * pl, int flag)
 
 void pulse_listener_clear_request(pulse_listener * pl)
 {
+    SDL_LockMutex(pl->service_mutex);
     pl->serviced_how = PL_REQ_NO_REQUEST;
+    SDL_UnlockMutex(pl->service_mutex);
 }
 
 
@@ -70,22 +72,32 @@ int listener_thread_func(void * data)
         // if we were signalled, post the semaphore
         if(ret_val > 0)
         {
+	  //  	    printf("[thread] obtained ppdev notification.\n");
+
             // if the pulse was requested by the main program, check if we
             // got to it first before timeout
             SDL_LockMutex(pl->service_mutex);
+	    //	    printf("[thread] acquired mutex\n");
             if(pl->serviced_how == PL_REQ_NOT_SERVICED)
+	    {
+	      //	        printf("[thread]: setting serviced how flag to serviced.\n");
+
                 // we have acquired a pulse
                 pl->serviced_how = PL_REQ_PULSE_ACQUIRED;
+
+		// remove the timer request
+		SDL_RemoveTimer(pl->timer);
+		pl->timer = 0;
+		//		printf("[thread] removed timer.\n");
+
+		SDL_SemPost(pl->semaphore);
+	    }
             SDL_UnlockMutex(pl->service_mutex);
 
-            // if we got the pulse before timeout, send out notifications
-            if(pl->serviced_how == PL_REQ_PULSE_ACQUIRED)
-                // we post the finding to the wait_for_pulse() method via semaphore
-                SDL_SemPost(pl->semaphore);
+	    // log the pulse occurring event if this logging is requested
+	    if(pl->log_pulses)
+	      event_logger_log_with_timestamp(LOGEVENT_PULSE_ACQUIRED, 0);
 
-            // log the pulse occurring event if this logging is requested
-            if(pl->log_pulses)
-                event_logger_log_with_timestamp(LOGEVENT_PULSE_ACQUIRED, 0);
 
             // clear any lingering pulses (echos)
             SDL_Delay(1);
@@ -113,16 +125,15 @@ void pulse_listener_initialize(pulse_listener* pl)
 uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
 {
     pulse_listener * pl = data;
+
+    //    printf("[listener timed out]\n");
     
     SDL_LockMutex(pl->service_mutex);
+    //    printf("[timeout have mutex]\n");
     if(pl->serviced_how == PL_REQ_NOT_SERVICED)
     {
         pl->serviced_how = PL_REQ_TIMED_OUT;
-    }
-    SDL_UnlockMutex(pl->service_mutex);
-    
-    if(pl->serviced_how == PL_REQ_TIMED_OUT)
-    {
+
         SDL_SemPost(pl->semaphore);
 
         // only log the pulse if we were servicing a request
@@ -130,7 +141,8 @@ uint32_t pulse_listener_timed_out(uint32_t timeout_ms, void * data)
         if(pl->log_pulses)
            event_logger_log_with_timestamp(LOGEVENT_PULSE_TIMED_OUT, 0);
     }
-        
+    SDL_UnlockMutex(pl->service_mutex);
+    
     // we do not wish to renew the timer
     return 0;
 }
@@ -144,15 +156,23 @@ int listen_for_pulse(pulse_listener * pl, uint32_t timeout_ms)
     clear_pulse_register(pl);
     
     // initialize service variables
+    SDL_LockMutex(pl->service_mutex);
     pl->serviced_how = PL_REQ_NOT_SERVICED;
     pl->timer = 0;
+    SDL_UnlockMutex(pl->service_mutex);
     
     // add time-out notification
     if(timeout_ms > 0)
+      {
+	//	printf("Setting timer for %d ms.\n", timeout_ms);
         pl->timer = SDL_AddTimer(timeout_ms, pulse_listener_timed_out, pl);
+	assert(pl->timer != 0);
+      }
     
+    //    printf("[listen] waiting for semaphore.\n");
     // we wait for the semaphore indefinitely
     SDL_SemWait(pl->semaphore);
+    //    printf("[listen] got semaphore, serviced how is %d.\n", pl->serviced_how);
 
     return pl->serviced_how;
 }
