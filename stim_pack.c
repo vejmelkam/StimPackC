@@ -13,7 +13,7 @@
 #include <math.h>
 #include <time.h>
 
-#define PRODUCTION_CODE
+//#define PRODUCTION_CODE 
 
 
 /* global rendering variables */
@@ -51,11 +51,11 @@ int cal_video;
 
 #define MARQUEE_FONT_SIZE 40
 #define INITIAL_PULSE_TIMEOUT 1000
-#define REGULAR_PULSE_TIMEOUT 3000
-#define VIDEO_DURATION (480 * 1000)
+#define REGULAR_PULSE_TIMEOUT 500
+#define VIDEO_DURATION (10 * 1000)
 #define INTERVIDEO_REST_DURATION (5*1000)
-#define REST_MESSAGE_TIMEOUT 2000
-#define FINAL_REST_DURATION (2*1000)
+#define REST_MESSAGE_TIMEOUT (5*1000)
+#define FINAL_REST_DURATION (10*1000)
 #define VIDEO_SCENE_COUNT 10
 
 #endif // PRODUCTION_CODE
@@ -72,12 +72,12 @@ typedef struct {
 video_entry video_db[] = 
 {
   { "data/videos/TP01_640.avi",  25,  0, 16, 9 },
-  { "data/videos/TP02_640.avi",  25, 40,  4, 3 },
-  { "data/videos/TP03_640.avi",  30, 50,  4, 3 },
-  { "data/videos/TP04_640.avi",  30, 70,  4, 3 },
+  { "data/videos/TP02_640.avi",  25, 40, 4, 3 },
+  { "data/videos/TP03_640.avi",  35, 50, 4, 3 },
+  { "data/videos/TP04_640.avi",  35, 70, 4, 3 },
   { "data/videos/TP05_640.avi", 100, 75, 16, 9 },
-  { "data/videos/TP06_640.avi",  30, 65, 16, 9 },
-  { "data/videos/TP07_640.avi",  25, 70, 16, 9 },
+  { "data/videos/TP06_640.avi",  35, 65, 16, 9 },
+  { "data/videos/TP07_640.avi",  30, 70, 16, 9 },
   { "data/videos/TP08_640.avi",  25, 80, 16, 9 },
   { "data/videos/TP09_640.avi",  40, 35, 16, 9 },
   { "data/videos/TP10_640.avi",  25, 75,  4, 3 }
@@ -89,7 +89,7 @@ void preload_video(const char * filename)
     char buf[1000000];
     FILE * f = fopen(filename, "r");
     int max_reads = 0;
-    while(!feof(f) && (++max_reads < 100))
+    while(!feof(f) && (++max_reads < 50))
         fread(buf, 1000000, 1, f);
     fclose(f);
 }
@@ -369,9 +369,9 @@ int parse_argument_line(int argc, char ** argv)
     }
     else
     {
-      //        printf("[stimpack] [%s] pre-loading calibration video [id %d]\n",
-      //       string_timestamp(), cal_video);
-	//	preload_video(video_db[cal_video-1].filename);
+        printf("[stimpack] [%s] pre-loading calibration video [id %d]\n",
+        string_timestamp(), cal_video);
+	preload_video(video_db[cal_video-1].filename);
     }
     
     int ok = 1;
@@ -385,9 +385,9 @@ int parse_argument_line(int argc, char ** argv)
         }
 	else
 	{
-	  //	    printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
-	  //	   string_timestamp(), i + 1, video_sched[i]);
-	    //	    preload_video(video_db[i].filename);
+            printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
+            string_timestamp(), i + 1, video_sched[i]);
+	    preload_video(video_db[i].filename);
 	}
     }
 
@@ -407,9 +407,9 @@ int main(int argc, char ** argv)
 	   string_timestamp());
 
 #ifdef PRODUCTION_CODE
-    printf("[stimpack] ***** this version is production code *****\n");
+    printf("\033[92m[stimpack] ***** this version is production code *****\033[0m\n");
 #else
-    printf("[stimpack] ***** THIS VERSION IS TEST CODE, NOT FOR USE *****\n");
+    printf("\033[91m[stimpack] ***** THIS VERSION IS TEST CODE, NOT FOR USE *****\033[0m\n");
 #endif
 
     printf("Subject id: %s cal_video: %d schedule: %d %d %d %d\n",
@@ -529,9 +529,9 @@ int main(int argc, char ** argv)
 	  printf("[wait-for-pulse] [%s] pulse received.\n", string_timestamp());
 	  break;
 	}
-
+        
         // we have the info, clear the request flag
-	pulse_listener_clear_request(&pl);
+        pulse_listener_clear_request(&pl);
 
 	// delay to equalize videos
 	printf("[stimpack] waiting %d ms before playing.\n", ve->add_latency);
