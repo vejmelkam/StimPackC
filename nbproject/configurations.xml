@@ -2,13 +2,22 @@
 <configurationDescriptor version="79">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <df name="StimPackC" root=".">
+      <df name="analysis">
+        <in>sift_event_log.m</in>
+      </df>
       <df name="data">
+        <df name="audio">
+        </df>
         <df name="videos">
         </df>
       </df>
+      <df name="ev_logs">
+      </df>
       <df name="fonts">
       </df>
-      <df name="logs">
+      <df name="sys_logs">
+      </df>
+      <df name="vlc_logs">
       </df>
       <in>SDL_draw.h</in>
       <in>calibration.c</in>
@@ -17,6 +26,7 @@
       <in>event_logger.h</in>
       <in>pulse_listener.c</in>
       <in>pulse_listener.h</in>
+      <in>pulse_test.c</in>
       <in>stim_pack.c</in>
       <in>video_player.c</in>
       <in>video_player.h</in>

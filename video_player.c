@@ -20,6 +20,7 @@ void vp_initialize(video_player_info * vpi)
     char const *argv[] = {
         "--file-caching=10000",
         "--no-xlib",
+        "--aout=oss",
         "--verbose=4"
     };    
     int argc = sizeof(argv) / sizeof(const char*);
