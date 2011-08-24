@@ -6,6 +6,14 @@ then
     exit
 fi
 
+# check if log directories exist
+for DIR in [ ev_logs sys_logs vlc_logs ]; do
+    if [ ! -d "$DIR" ]; then
+	echo "Log dir $DIR does not exist, creating ..."
+	mkdir "$DIR"
+    fi
+done
+
 export SDL_VIDEO_WINDOW_POS=0,0
 
 DATECODE="`date +%Y%m%d%H%M`"

@@ -384,13 +384,23 @@ int parse_argument_line(int argc, char ** argv)
             ok = 0;
         }
 	else
-	{
+	{            
             printf("[stimpack] [%s] pre-loading video %d [id %d]\n",
             string_timestamp(), i + 1, video_sched[i]);
 	    preload_video(video_db[i].filename);
 	}
     }
-
+    
+    
+#ifndef PRODUCTION_CODE
+    for(int i = 0; i < 10; i++)
+    {
+        printf("[stimpack-test] [%s] pre-loading video [id %d]\n",
+                        string_timestamp(), i+1);
+        preload_video(video_db[i].filename);
+    }
+#endif
+    
     return ok;
 }
 

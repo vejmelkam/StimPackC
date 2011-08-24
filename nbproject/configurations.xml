@@ -2,6 +2,10 @@
 <configurationDescriptor version="79">
   <logicalFolder name="root" displayName="root" projectFiles="true" kind="ROOT">
     <df name="StimPackC" root=".">
+      <df name="[">
+      </df>
+      <df name="]">
+      </df>
       <df name="analysis">
         <in>sift_event_log.m</in>
       </df>
